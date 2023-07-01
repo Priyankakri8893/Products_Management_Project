@@ -23,8 +23,8 @@ let uploadFile = async (file) => {
       if (err) {
         return reject({"error": err});
       }
-      console.log(data);
-      console.log("File uploaded successfully");
+      // console.log(data);
+      // console.log("File uploaded successfully");
       return resolve(data.Location);
     });
   });
