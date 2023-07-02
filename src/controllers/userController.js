@@ -122,6 +122,8 @@ const userRegister= async (req, res) => {
     }
 }
 
+// ********************************************************************************** //
+
 const userLogin= async (req, res) => {
     try {
         let {email, password}= req.body
@@ -174,6 +176,8 @@ const userLogin= async (req, res) => {
     }
 }
 
+// ********************************************************************************** //
+
 const getUser= async (req, res) => {
     try {
         let {userId}= req.params
@@ -208,6 +212,8 @@ const getUser= async (req, res) => {
         })
     }
 }
+
+// ********************************************************************************** //
 
 const updateUser= async (req, res) => {
     try {
