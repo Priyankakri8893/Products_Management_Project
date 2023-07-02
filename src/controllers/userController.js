@@ -232,7 +232,7 @@ const updateUser= async (req, res) => {
         })
 
         //authorization
-        if(req["x-api-key"].userId != userIdExit._Id){
+        if(req["x-api-key"].userId != userIdExit._id){
             return res.status(403).send({
                 status: false,
                 message: "unauthorized, userId not same"
