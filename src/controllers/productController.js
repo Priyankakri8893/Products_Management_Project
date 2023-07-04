@@ -2,6 +2,7 @@ const productModel= require("../models/productModel")
 const validator= require("validator")
 const {isValid}= require("../validation/isvalid")
 const {uploadFile}= require("../awss3/awsS3")
+const { default: mongoose } = require("mongoose")
 
 const postProduct= async (req, res) => {
     try {
@@ -98,22 +99,84 @@ const postProduct= async (req, res) => {
 
 // ********************************************************************************** //
 
-const getProduct= async (req, res) => {
+const getProduct = async (req, res) => {
     try {
-        
-    } catch (error) {
-        res.status(500).send({
+      let { size, name, priceGreaterThan, priceLessThan, priceSort } = req.query;
+  
+      let filters = { isDeleted: false };
+  
+      if (name) {
+        filters.title = { $regex: name, $options: "i" };
+      }
+  
+      if (size) {
+        filters["availableSizes"] = { $in: size.split(",") };
+      }
+  
+      if (priceGreaterThan) {
+        filters.price = { $gt: parseInt(priceGreaterThan) };
+      }
+  
+      if (priceLessThan) {
+        if (filters.price) {
+          filters.price.$lt = parseInt(priceLessThan);
+        } else {
+          filters.price = { $lt: parseInt(priceLessThan) };
+        }
+      }
+  
+      let sortOption = {};
+      if (priceSort) {
+        sortOption.price = parseInt(priceSort);
+      }
+  
+      const products = await productModel.find(filters).sort(sortOption);
+
+      if(products.length === 0){
+        return res.status(404).send({
             status: false,
-            message: error.message
+            message: "product not found"
         })
+      }
+  
+      res.status(200).send({
+        status: true,
+        message: "product successfully find",
+        data: products
+      });
+    } catch (error) {
+      res.status(500).send({
+        status: false,
+        message: error.message,
+      });
     }
-}
+  };
+  
 
 // ********************************************************************************** //
 
 const getProductById= async (req, res) => {
     try {
-        
+        let {productId}= req.params
+
+        if(!isValid(productId)) return res.status(404)
+        .send({
+            status: false,
+            message: 'please provide productId'
+        })
+
+        if(!mongoose.isValidObjectId(productId)){
+            return res.status(400).send({
+                status: false,
+                message: "please provide valid productId"
+            })
+        }
+
+        let productIdExit= await productModel.findOne({_id: productId, isDeleted: false}) 
+        if(!productIdExit) return res.status(404).send({
+            status: false,
+            message: 'productId not exit'
+        })
     } catch (error) {
         res.status(500).send({
             status: false,
