@@ -130,6 +130,92 @@ const postCart= async (req, res) => {
 
 const updateCart= async (req, res) => {
     try {
+        let {userId}= req.params
+
+        if(!isValid(userId)){
+            return res.status(404).send({
+                status: false, 
+                message: "userId is invalid"
+            })
+        }
+
+        if(!mongoose.isValidObjectId(userId)){
+            return res.status(400).send({
+                status: false, 
+                message: "userId is not valid"
+            }) 
+        }
+
+        //userId check in userModel
+        let userIdExit= await userModel.findById({_id: userId})
+
+        if(!userIdExit){
+            return res.status(404).send({
+                status: false, 
+                message: "userId is not exit"
+            })
+        }
+
+        //authorization check here
+        if(req["x-api-key"].userId != userIdExit._id){
+            return res.status(403).send({
+                status: false,
+                message: "unauthorized, userId not same"
+            })
+        }
+
+        let {_id, productId, removeProduct}= req.body
+        
+        //check id is valid or not
+        if(!isValid(_id)){
+            return res.status(404).send({
+                status: false, 
+                message: "cartid is invalid"
+            })
+        }
+
+        if(!mongoose.isValidObjectId(_id)){
+            return res.status(400).send({
+                status: false, 
+                message: "cartid is not valid"
+            }) 
+        }
+
+        if(!isValid(productId)){
+            return res.status(404).send({
+                status: false, 
+                message: "productId is invalid"
+            })
+        }
+
+        if(!mongoose.isValidObjectId(productId)){
+            return res.status(400).send({
+                status: false, 
+                message: "productId is not valid"
+            }) 
+        }
+        //check cart exit or not
+        let cartExit= await cartModel.findOne({
+            userId: userId,
+            _id: _id
+        })
+
+        if(!cartExit){
+            return res.status(404).send({
+                status: false, 
+                message: "userId is not valid"
+            })
+        }
+
+        //product id check
+        const itemExists = cartExit.items.some(item => item.productId.toString() === productId.toString());
+
+        if (!itemExists) {
+          return res.status(404).send({
+            status: false,
+            message: "productId is not exit in cart"
+          });
+        }
         
     } catch (error) {
         res.status(500).send({
