@@ -356,7 +356,42 @@ const updateProduct= async (req, res) => {
 
 const deleteProduct= async (req, res) => {
     try {
-        
+        let {productId}= req.params
+
+        if(!isValid(productId)){
+            return res.status(404).send({
+                status: false,
+                message: "product id is invalid"
+            })
+        }
+
+        if(!mongoose.isValidObjectId(productId)){
+            return res.status(400).send({
+                status: false,
+                message: "productId is not valid"
+            })
+        }
+
+        let product= await productModel.findOne({
+            _id: productId, isDeleted: false
+        })
+
+        if(!product){
+            return res.status(404).send({
+                status: false,
+                message: "productId not exit"
+            })
+        }
+
+        product.isDeleted= true
+
+        await product.save()
+
+        res.status(200).send({
+            status: false,
+            message: "product is deleted successfully",
+            data: ""
+        })
     } catch (error) {
         res.status(500).send({
             status: false,
