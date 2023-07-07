@@ -229,7 +229,56 @@ const updateCart= async (req, res) => {
 
 const getCart= async (req, res) => {
     try {
-        
+        let {userId}= req.params
+
+        if(!isValid(userId)){
+            return res.status(404).send({
+                status: false, 
+                message: "userId is invalid"
+            })
+        }
+
+        if(!mongoose.isValidObjectId(userId)){
+            return res.status(400).send({
+                status: false, 
+                message: "userId is not valid"
+            }) 
+        }
+
+        //userId check in userModel
+        let userIdExit= await userModel.findById({_id: userId})
+
+        if(!userIdExit){
+            return res.status(404).send({
+                status: false, 
+                message: "userId is not exit"
+            })
+        }
+
+        //authorization check here
+        if(req["x-api-key"].userId != userIdExit._id){
+            return res.status(403).send({
+                status: false,
+                message: "unauthorized, userId not same"
+            })
+        }
+
+        let userIdExitInCart= await cartModel.findOne({
+            userId: userId
+        })
+
+        if(!userIdExitInCart){
+            return res.status(404).send({
+                status: false,
+                message: "cart not exit by this userId"
+            })
+        }
+
+        res.status(200).send({
+            status: true,
+            message: "cart detail successfully get",
+            data: userIdExitInCart
+        })
     } catch (error) {
         res.status(500).send({
             status: false,
@@ -242,7 +291,62 @@ const getCart= async (req, res) => {
 
 const deleteCart= async (req, res) => {
     try {
-        
+        let {userId}= req.params
+
+        if(!isValid(userId)){
+            return res.status(404).send({
+                status: false, 
+                message: "userId is invalid"
+            })
+        }
+
+        if(!mongoose.isValidObjectId(userId)){
+            return res.status(400).send({
+                status: false, 
+                message: "userId is not valid"
+            }) 
+        }
+
+        //userId check in userModel
+        let userIdExit= await userModel.findById({_id: userId})
+
+        if(!userIdExit){
+            return res.status(404).send({
+                status: false, 
+                message: "userId is not exit"
+            })
+        }
+
+        //authorization check here
+        if(req["x-api-key"].userId != userIdExit._id){
+            return res.status(403).send({
+                status: false,
+                message: "unauthorized, userId not same"
+            })
+        }
+
+        let userIdExitInCart= await cartModel.findOne({
+            userId: userId
+        })
+
+        if(!userIdExitInCart){
+            return res.status(404).send({
+                status: false,
+                message: "cart not exit by this userId"
+            })
+        }
+
+        userIdExitInCart.items= []
+        userIdExitInCart.totalItems= 0
+        userIdExitInCart.totalPrice= 0
+
+        let deleteCart= await userIdExitInCart.save()
+
+        res.status(204).send({
+            status: false,
+            message: "successfully deleted cart",
+            data: deleteCart
+        })
     } catch (error) {
         res.status(500).send({
             status: false,
