@@ -4,6 +4,7 @@ const {auth}= require("../middlewares/auth")
 const {userRegister, userLogin, getUser, updateUser}= require("../controllers/userController")
 const {postProduct, getProduct, getProductById, updateProduct, deleteProduct}= require("../controllers/productController")
 const {postCart, updateCart, getCart, deleteCart}= require("../controllers/cartController")
+const {orders, updateOrders}= require('../controllers/orderController')
 
 router.post("/register", userRegister)
 router.post("/login", userLogin)
@@ -20,5 +21,8 @@ router.post("/users/:userId/cart", postCart)
 router.put("/users/:userId/cart", updateCart)
 router.get("/users/:userId/cart", getCart)
 router.delete("/users/:userId/cart", deleteCart)
+
+router.post("/users/:userId/orders", orders)
+router.put("/users/:userId/orders", updateOrders)
 
 module.exports= router
