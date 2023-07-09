@@ -6,18 +6,25 @@ const { default: mongoose } = require("mongoose")
 
 const postProduct= async (req, res) => {
     try {
-        let {title, description, price, currencyId, currencyFormate, 
+        let {title, description, price, currencyId, currencyFormat, 
             style, availableSizes, installments}= req.body
 
         //check detail is valid or not
-        if(!isValid(title) || !isValid(description) || !isValid(currencyFormate) || !isValid(currencyId)){
+        if(!isValid(title) || !isValid(description) || !isValid(currencyFormat) || !isValid(currencyId)){
             return res.status(400).send({
                 status: false,
                 message: "provide valid detail"
             })
-        }//recheckhere
+        }
 
-        if(!price || typeof price !== "number"){
+        if(currencyFormat != '₹' || currencyId != 'INR'){
+            return res.status(400).send({
+                status: false,
+                message: "provide valid currencyFormat & currencyId"
+            })
+        }
+
+        if(!price){
             return res.status(400).send({
                 status: false,
                 message: "provide price"
@@ -33,16 +40,16 @@ const postProduct= async (req, res) => {
             }
         }
 
-        if(installments){
-            if(typeof installments !== "number"){
-                return res.status(400).send({
-                    status: false,
-                    message: "provide valid installments"
-                })
-            }
-        }
+        // if(installments){
+        //     if(typeof installments !== "number"){
+        //         return res.status(400).send({
+        //             status: false,
+        //             message: "provide valid installments"
+        //         })
+        //     }
+        // }
         
-        if(!availableSizes || typeof availableSizes !== "object"){
+        if(!availableSizes){
             return res.status(400).send({
                 status: false,
                 message: "provide at least one availableSizes"
@@ -54,16 +61,16 @@ const postProduct= async (req, res) => {
             if(!productSize.includes(availableSizes[i])){
                 return res.status(400).send({
                     status: false,
-                    message: "provide valid size"
+                    message: `provide valid size ["S", "XS","M","X", "L","XXL", "XL"]`
                 })
             }
         }
 
         // aws S3
 
-        let {productImage}= req.files
-        if(productImage && productImage.length > 0){
-            let awss3link= uploadFile(productImage[0])
+        let files= req.files
+        if(files && files.length > 0){
+            let awss3link= await uploadFile(files[0])
             req.body.productImage= awss3link
         }else{
             return res.status(400).send({

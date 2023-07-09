@@ -22,7 +22,7 @@ const productSchema = new mongoose.Schema({
   description: { type: String, required: true, trim: true },
   price: { type: Number, required: true, min: 0 },
   currencyId: { type: String, required: true, enum: ['INR'], trim: true },
-  currencyFormat: { type: String, required: true },
+  currencyFormat: { type: String, required: true, enum: ['₹'] },
   isFreeShipping: { type: Boolean, default: false },
   productImage: { type: String, required: true },
   style: { type: String, trim: true },
@@ -34,14 +34,7 @@ const productSchema = new mongoose.Schema({
         required: true,
         trim: true
       }
-    ],
-    validate: {
-      validator: function (sizes) {
-        return sizes.length > 0;
-      },
-      message: 'At least one size must be provided.'
-    }
-  },
+    ]},
   installments: { type: Number },
   deletedAt: { type: Date },
   isDeleted: { type: Boolean, default: false }
