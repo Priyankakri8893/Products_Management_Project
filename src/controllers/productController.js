@@ -184,6 +184,12 @@ const getProductById= async (req, res) => {
             status: false,
             message: 'productId not exit'
         })
+
+        res.status(200).send({
+            status: false,
+            message: "product detail successfully get",
+            data: productIdExit
+        })
     } catch (error) {
         res.status(500).send({
             status: false,
@@ -211,15 +217,15 @@ const updateProduct= async (req, res) => {
             message: 'please provide valid productId'
         })
 
-        let productIdExit= await productModel.findById({_id: productId}) 
+        let productIdExit= await productModel.findOne({_id: productId, isDeleted: false}) 
 
-        if(!productIdExit) return res.status(400).send({
+        if(!productIdExit) return res.status(404).send({
             status: false,
             message: 'productId not exit'
         })
 
         //update detail verify and add 
-        let {title, description, price, currencyId, currencyFormate, 
+        let {title, description, price, currencyId, currencyFormat, 
             style, availableSizes, installments}= req.body
 
         if(title){
@@ -253,7 +259,7 @@ const updateProduct= async (req, res) => {
     }
 
     if(price){
-        if(!price || typeof price !== "number"){
+        if(!price){
             return res.status(400).send({
                 status: false,
                 message: "provide price"
@@ -274,15 +280,15 @@ const updateProduct= async (req, res) => {
     productIdExit.currencyId= currencyId
     }
 
-    if(currencyFormate){
-        if(!isValid(currencyFormate)){
+    if(currencyFormat){
+        if(!isValid(currencyFormat)){
             return res.status(400).send({
                 status: false,
-                message: "provide valid currencyFormate"
+                message: "provide valid currencyFormat"
             })
     }
     
-    productIdExit.currencyFormate= currencyFormate
+    productIdExit.currencyFormat= currencyFormat
     }
 
     if(style){
@@ -297,24 +303,10 @@ const updateProduct= async (req, res) => {
     }
 
     if(installments){
-        if(typeof installments !== "number"){
-            return res.status(400).send({
-                status: false,
-                message: "provide valid installments"
-            })
-        }
-
         productIdExit.installments= installments
     }
 
     if(availableSizes){
-        if(!availableSizes || typeof availableSizes !== "object"){
-            return res.status(400).send({
-                status: false,
-                message: "provide at least one availableSizes"
-            })
-        }
-
         let productSize= ["S", "XS","M","X", "L","XXL", "XL"]
         for(let i=0; i<availableSizes.length; i++){
             if(!productSize.includes(availableSizes[i])){
@@ -330,11 +322,11 @@ const updateProduct= async (req, res) => {
 
     // aws S3
 
-    let {productImage}= req.files
+    let files= req.files
 
-    if(productImage){
-        if(productImage && productImage.length > 0){
-            let awss3link= uploadFile(productImage[0])
+    if(files){
+        if(files && files.length > 0){
+            let awss3link= await uploadFile(files[0])
             productIdExit.productImage= awss3link
         }else{
             return res.status(400).send({
