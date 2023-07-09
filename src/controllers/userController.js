@@ -1,5 +1,6 @@
 const userModel= require('../models/userModel')
 const validator= require("validator")
+const mongoose= require('mongoose')
 const {isValid}= require("../validation/isvalid")
 const {uploadFile}= require("../awss3/awsS3")
 const bcrypt= require("bcrypt")
@@ -66,9 +67,10 @@ const userRegister= async (req, res) => {
 
         // aws S3
 
-        let {profileImage}= req.files
-        if(profileImage && profileImage.length > 0){
-            let awss3link= uploadFile(profileImage[0])
+        let files= req.files
+    
+        if(files && files.length > 0){
+            let awss3link= await uploadFile(files[0])
             req.body.profileImage= awss3link
         }else{
             return res.status(400).send({
@@ -98,13 +100,13 @@ const userRegister= async (req, res) => {
         //password bcrypt
 
         // Generate a salt
-        const salt = await bcrypt.genSalt(10);
+        // const salt = await bcrypt.genSalt(10);
         
         // Hash the password with the salt
-        const hashedPassword = await bcrypt.hash(password, salt);
+        const hashedPassword = await bcrypt.hash(password, 10);
         
         // Replace the plain text password with the hashed password
-        password = hashedPassword;
+        req.body.password = hashedPassword;
 
         const userRegister= await userModel.create(req.body)
 
@@ -116,7 +118,7 @@ const userRegister= async (req, res) => {
 
     } catch (error) {
         res.status(500).send({
-            status: true,
+            status: false,
             message: error.message
         })
     }
@@ -149,7 +151,7 @@ const userLogin= async (req, res) => {
         
         let match= bcrypt.compare(password, databasePassword)
         
-        if(!match){
+        if(match != true){
             return res.status(401).send({
                 status : false, 
                 message : "invalid password" 
@@ -170,7 +172,7 @@ const userLogin= async (req, res) => {
         })
     } catch (error) {
         res.status(500).send({
-            status: true,
+            status: false,
             message: error.message
         })
     }
@@ -207,7 +209,7 @@ const getUser= async (req, res) => {
         })
     } catch (error) {
         res.status(500).send({
-            status: true,
+            status: false,
             message: error.message
         })
     }
@@ -231,22 +233,30 @@ const updateUser= async (req, res) => {
             message: 'please provide valid userId'
         })
 
-        let userIdExit= await userModel.findOne({_id: userId}) 
+        let userIdExit= await userModel.findById({_id: userId}) 
         if(!userIdExit) return res.status(404).send({
             status: false,
             message: 'userId not exit'
         })
 
-        //authorization
-        if(req["x-api-key"].userId != userIdExit._id){
-            return res.status(403).send({
-                status: false,
-                message: "unauthorized, userId not same"
-            })
-        }
+        // //authorization
+        // if(req["x-api-key"].userId != userIdExit._id){
+        //     return res.status(403).send({
+        //         status: false,
+        //         message: "unauthorized, userId not same"
+        //     })
+        // }
 
         //detail for updation
         let {fname, lname, email, phone, password, address}= req.body
+
+        if (Object.keys(req.body).length === 0) {
+            return res.status(400).send({
+              status: false,
+              message: 'please provide detail for update',
+            });
+          }
+        
 
         if(fname){
             if(!isValid(fname)){
@@ -285,10 +295,10 @@ const updateUser= async (req, res) => {
             //password bcrypt
 
             // Generate a salt
-            const salt = await bcrypt.genSalt(10);
+            // const salt = await bcrypt.genSalt(10);
             
             // Hash the password with the salt
-            const hashedPassword = await bcrypt.hash(password, salt);
+            const hashedPassword = await bcrypt.hash(password, 10);
             
             // Replace the plain text password with the hashed password
             userIdExit.password = hashedPassword;
@@ -344,7 +354,7 @@ const updateUser= async (req, res) => {
             userIdExit.phone= phone
         }
 
-        if(address.shipping.street){
+        if(address && address.shipping && address.shipping.street){
             if(!isValid(address.shipping.street)){
                 return res.status(400).send({
                     status: false,
@@ -354,7 +364,7 @@ const updateUser= async (req, res) => {
             userIdExit.address.shipping.street= address.shipping.street
         }
 
-        if(address.shipping.city){
+        if(address && address.shipping && address.shipping.city){
             if(!isValid(address.shipping.city)){
                 return res.status(400).send({
                     status: false,
@@ -364,7 +374,7 @@ const updateUser= async (req, res) => {
             userIdExit.address.shipping.city= address.shipping.city
         }
 
-        if(address.billing.street){
+        if(address && address.billing && address.billing.street){
             if(!isValid(address.billing.street)){
                 return res.status(400).send({
                     status: false,
@@ -374,7 +384,7 @@ const updateUser= async (req, res) => {
             userIdExit.address.billing.street= address.billing.street
         }
 
-        if(address.billing.city){
+        if(address && address.billing && address.billing.city){
             if(!isValid(address.billing.city)){
                 return res.status(400).send({
                     status: false,
@@ -384,7 +394,7 @@ const updateUser= async (req, res) => {
             userIdExit.address.billing.city= address.billing.city
         }
 
-        if(address.shipping.pincode){
+        if(address && address.shipping && address.shipping.pincode){
             if(!address.shipping.pincode && typeof address.shipping.pincode !== 'number'){
                 return res.status(400).send({
                     status: false,
@@ -394,7 +404,7 @@ const updateUser= async (req, res) => {
             userIdExit.address.shipping.pincode= address.shipping.pincode
         }
 
-        if(address.billing.pincode){
+        if(address && address.billing && address.billing.pincode){
             if(!address.billing.pincode && typeof address.billing.pincode !== 'number'){
                 return res.status(400).send({
                     status: false,
@@ -406,13 +416,13 @@ const updateUser= async (req, res) => {
 
         // aws S3
 
-        let {profileImage}= req.files
-        if(profileImage){
-            if(profileImage && profileImage.length > 0){
-                let awss3link= uploadFile(profileImage[0])
+        let files= req.files
+
+            if(files && files.length > 0){
+                let awss3link= await uploadFile(files[0])
                 userIdExit.profileImage= awss3link
             }
-        }
+        
 
         const updateUser= await userIdExit.save()
 
@@ -424,7 +434,7 @@ const updateUser= async (req, res) => {
         
     } catch (error) {
         res.status(500).send({
-            status: true,
+            status: false,
             message: error.message
         })
     }
