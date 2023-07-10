@@ -33,20 +33,20 @@ const postCart= async (req, res) => {
             })
         }
 
-        //authorization check here
-        if(req["x-api-key"].userId != userIdExit._id){
-            return res.status(403).send({
-                status: false,
-                message: "unauthorized, userId not same"
-            })
-        }
+        // //authorization check here
+        // if(req["x-api-key"].userId != userIdExit._id){
+        //     return res.status(403).send({
+        //         status: false,
+        //         message: "unauthorized, userId not same"
+        //     })
+        // }
 
         let userIdExitInCart= await cartModel.findOne({
             userId: userId
         })
 
         let {items}= req.body
-        if(items.length === 0){
+        if(!items || items.length === 0){
             return res.status(400).send({
                 status: false,
                 message: "please provide items detail"
@@ -54,7 +54,7 @@ const postCart= async (req, res) => {
         }
 
         let totalPrice= 0
-        let totalItems= 0
+        let totalItems= items.length
 
         for(let i=0; i<items.length; i++){
             if(!isValid(items[i].productId)){
@@ -72,7 +72,7 @@ const postCart= async (req, res) => {
             }
 
             let productIdExit= await productModel.findById({
-                _id: items[i].productId
+                _id: items[i].productId, isDeleted: false
             })
 
             if(!productIdExit){
@@ -82,15 +82,14 @@ const postCart= async (req, res) => {
                 })
             }
 
-            if(items[i].quantity < 1){
+            if(items[i].quantity < '1'){
                 return res.status(400).send({
                     status: false,
                     message: "provide quantity"
                 })
             }
 
-            totalPrice += items[i].quantity * productIdExit.price
-            totalItems += items[i].quantity
+            totalPrice += parseInt(items[i].quantity) * productIdExit.price
         }
         if(!userIdExitInCart){
             req.body.userId= userId
@@ -105,11 +104,23 @@ const postCart= async (req, res) => {
                 data: cartCreate
             })
         }else{
-            userIdExitInCart.items.concat(items)
+            for(let i=0; i<items.length; i++){
+                let productAlreadyExit= false
+                for(let j=0; j<userIdExitInCart.items.length; j++){
+                if(userIdExitInCart.items[j].productId == items[i].productId){
+                    userIdExitInCart.items[j].quantity += parseInt(items[i].quantity)
+                    productAlreadyExit= true
+                    break;
+                }
+            }
+            if(productAlreadyExit == false){
+                userIdExitInCart.items.push(items[i])
+            }
+            }
             userIdExitInCart.totalPrice += totalPrice
-            userIdExitInCart.totalItems += totalItems
+            userIdExitInCart.totalItems = userIdExitInCart.items.length
 
-            let cartCreate= await userIdExitInCart.save()
+            let cartCreate= await userIdExitInCart.save() 
 
             res.status(201).send({
                 status: true,
@@ -157,24 +168,24 @@ const updateCart= async (req, res) => {
         }
 
         //authorization check here
-        if(req["x-api-key"].userId != userIdExit._id){
-            return res.status(403).send({
-                status: false,
-                message: "unauthorized, userId not same"
-            })
-        }
+        // if(req["x-api-key"].userId != userIdExit._id){
+        //     return res.status(403).send({
+        //         status: false,
+        //         message: "unauthorized, userId not same"
+        //     })
+        // }
 
-        let {_id, productId, removeProduct}= req.body
+        let {cartId, productId, removeProduct}= req.body
         
         //check id is valid or not
-        if(!isValid(_id)){
+        if(!isValid(cartId)){
             return res.status(404).send({
                 status: false, 
                 message: "cartid is invalid"
             })
         }
 
-        if(!mongoose.isValidObjectId(_id)){
+        if(!mongoose.isValidObjectId(cartId)){
             return res.status(400).send({
                 status: false, 
                 message: "cartid is not valid"
@@ -197,26 +208,64 @@ const updateCart= async (req, res) => {
         //check cart exit or not
         let cartExit= await cartModel.findOne({
             userId: userId,
-            _id: _id
+            _id: cartId
         })
 
         if(!cartExit){
             return res.status(404).send({
                 status: false, 
-                message: "userId is not valid"
+                message: "userId & cartId is not valid"
             })
         }
 
         //product id check
         const itemExists = cartExit.items.some(item => item.productId.toString() === productId.toString());
 
-        if (!itemExists) {
+        if (itemExists == false) {
           return res.status(404).send({
             status: false,
             message: "productId is not exit in cart"
           });
         }
+
+        if(removeProduct != 0 && removeProduct != 1){
+            return res.status(400).send({
+                status: false,
+                message: "provide removeProduct 0 or 1"
+              });
+        }
+
+        const productIdCheckInProduct= await productModel.findById({_id: productId})
+
+        for(let i=0; i<cartExit.items.length; i++){
+            if(productId == cartExit.items[i].productId){
+                if(removeProduct == 1){
+                    if(cartExit.items[i].quantity > 1){
+                        cartExit.items[i].quantity -= 1
+                        cartExit.totalPrice -= productIdCheckInProduct.price
+                        break
+                    }else{
+                        cartExit.items.splice(i, 1)
+                        cartExit.totalPrice -= productIdCheckInProduct.price
+                        cartExit.totalItems -= 1
+                        break
+                    }
+                }else if(removeProduct == 0){
+                    cartExit.items.splice(i, 1)
+                    cartExit.totalPrice -= productIdCheckInProduct.price
+                    cartExit.totalItems -= 1
+                    break
+                }
+            }
+        }
+
+        let updateCart= await cartExit.save()
         
+        res.status(200).send({
+            status: true,
+            message: "successfully update",
+            data: updateCart
+        })
     } catch (error) {
         res.status(500).send({
             status: false,
@@ -256,12 +305,12 @@ const getCart= async (req, res) => {
         }
 
         //authorization check here
-        if(req["x-api-key"].userId != userIdExit._id){
-            return res.status(403).send({
-                status: false,
-                message: "unauthorized, userId not same"
-            })
-        }
+        // if(req["x-api-key"].userId != userIdExit._id){
+        //     return res.status(403).send({
+        //         status: false,
+        //         message: "unauthorized, userId not same"
+        //     })
+        // }
 
         let userIdExitInCart= await cartModel.findOne({
             userId: userId
@@ -318,12 +367,12 @@ const deleteCart= async (req, res) => {
         }
 
         //authorization check here
-        if(req["x-api-key"].userId != userIdExit._id){
-            return res.status(403).send({
-                status: false,
-                message: "unauthorized, userId not same"
-            })
-        }
+        // if(req["x-api-key"].userId != userIdExit._id){
+        //     return res.status(403).send({
+        //         status: false,
+        //         message: "unauthorized, userId not same"
+        //     })
+        // }
 
         let userIdExitInCart= await cartModel.findOne({
             userId: userId
