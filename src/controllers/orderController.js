@@ -33,13 +33,13 @@ const orders= async (req, res) => {
             })
         }
 
-        //authorization check here
-        // if(req["x-api-key"].userId != userIdExit._id){
-        //     return res.status(403).send({
-        //         status: false,
-        //         message: "unauthorized, userId not same"
-        //     })
-        // }
+        // authorization check here
+        if(req["x-api-key"].userId != userIdExit._id){
+            return res.status(403).send({
+                status: false,
+                message: "unauthorized, userId not same"
+            })
+        }
 
         let {cartId}= req.body
         if(!isValid(cartId)){
@@ -127,12 +127,12 @@ const updateOrders= async (req, res) => {
         }
 
         //authorization check here
-        // if(req["x-api-key"].userId != userIdExit._id){
-        //     return res.status(403).send({
-        //         status: false,
-        //         message: "unauthorized, userId not same"
-        //     })
-        // }
+        if(req["x-api-key"].userId != userIdExit._id){
+            return res.status(403).send({
+                status: false,
+                message: "unauthorized, userId not same"
+            })
+        }
 
         let {orderId, status}= req.body
 

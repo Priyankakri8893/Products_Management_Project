@@ -151,7 +151,7 @@ const userLogin= async (req, res) => {
         
         let match= bcrypt.compare(password, databasePassword)
         
-        if(match != true){
+        if(match == false){
             return res.status(401).send({
                 status : false, 
                 message : "invalid password" 
@@ -239,15 +239,15 @@ const updateUser= async (req, res) => {
             message: 'userId not exit'
         })
 
-        // //authorization
-        // if(req["x-api-key"].userId != userIdExit._id){
-        //     return res.status(403).send({
-        //         status: false,
-        //         message: "unauthorized, userId not same"
-        //     })
-        // }
+        //authorization
+        if(req["x-api-key"].userId != userIdExit._id){
+            return res.status(403).send({
+                status: false,
+                message: "unauthorized, userId not same"
+            })
+        }
 
-        //detail for updation
+        // detail for updation
         let {fname, lname, email, phone, password, address}= req.body
 
         if (Object.keys(req.body).length === 0) {
